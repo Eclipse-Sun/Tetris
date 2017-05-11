@@ -21,7 +21,7 @@ using namespace std;
 #define MAPWIDTH 10
 #define MAPHEIGHT 20
 
-int what;
+//int what;
 
 const double Inf_double = 10000000;
 
