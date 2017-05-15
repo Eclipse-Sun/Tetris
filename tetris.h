@@ -318,7 +318,7 @@ public:
     maxHeight_[color] -= count;
     elimTotal_[color] += elimBonus[count];
     lineTotal_[color] += count;
-    //cout << lineTotal_[color] << endl;
+    // cout << lineTotal_[color] << endl;
   }
 
   // 转移双方消去的行，返回-1表示继续，否则返回输者
@@ -734,14 +734,14 @@ double The_direct_best(Node &currNode_) {
 double alphabeta_singlemap(SingleNode &currSingleNode_, int depth, double alpha,
                            double beta, bool is_me, int init_depth,
                            position *BestPosition) {
-  // cout << "depth = " << depth << endl;
+  // cout << "DEPTH = " << depth << endl;
   if (depth == 0 || currSingleNode_.dead == 1) {
     double val = currSingleNode_.eval();
-    // cout << "depth = " << depth << "pos = " <<
-    // currSingleNode_.lastTetris.blockX << " " <<
-    // currSingleNode_.lastTetris.blockY << " " <<
-    // currSingleNode_.lastTetris.orientation << "************ val = " << val
-    // <<endl;
+    /*cout << "depth = " << depth << " pos = " <<
+       currSingleNode_.lastTetris.blockX
+         << " " << currSingleNode_.lastTetris.blockY << " "
+         << currSingleNode_.lastTetris.orientation
+         << " ************ val = " << val << endl;*/
     return val;
   }
   if (is_me == 1) {
@@ -750,11 +750,11 @@ double alphabeta_singlemap(SingleNode &currSingleNode_, int depth, double alpha,
              currSingleNode_.availablePosition.begin();
          itr != currSingleNode_.availablePosition.end(); ++itr) {
       SingleNode thisChild(currSingleNode_, *itr);
-      // cout << "depth: " << depth << "position : " << itr->x << " " << itr->y
-      // <<" " << itr->o << endl;
+      /*cout << "depth: " << depth << " position : " << itr->x << " " << itr->y
+           << " " << itr->o << endl;*/
       double tmp = alphabeta_singlemap(thisChild, depth - 1, alpha, beta, 0,
                                        init_depth, BestPosition);
-      // cout<< "tmp = " << tmp << endl;
+      // cout << "tmp = " << tmp << endl;
       if (tmp > val) {
         // cout << "val = " << tmp << endl;
         val = tmp;
@@ -771,24 +771,22 @@ double alphabeta_singlemap(SingleNode &currSingleNode_, int depth, double alpha,
       if (beta <= alpha)
         break;
     }
-    // cout << "depth = " << depth << "blocktype = " <<
-    // currSingleNode_.nextTypeForColor_ << "************ val = " << val <<
-    // endl;
+    /*cout << "depth = " << depth
+         << " blocktype = " << currSingleNode_.nextTypeForColor_
+         << " ************ val = " << val << endl;*/
     return val;
   } else {
     double val = Inf_double;
     for (list<int>::iterator itr = currSingleNode_.availableTetris.begin();
          itr != currSingleNode_.availableTetris.end(); ++itr) {
       SingleNode thisChild(currSingleNode_, *itr);
-      // cout << "type = :" << *itr << endl;
+      // cout << "type = " << *itr << endl;
       double tmp = alphabeta_singlemap(thisChild, depth - 1, alpha, beta, 1,
                                        init_depth, BestPosition);
       // cout << "tmp = " << tmp << endl;
       if (tmp < val) {
         val = tmp;
         // cout << "val = " << tmp << endl;
-        // if(depth == init_depth)
-        // *WorthTetris = *itr;
       }
       if (tmp < beta) {
         beta = tmp;
@@ -797,11 +795,11 @@ double alphabeta_singlemap(SingleNode &currSingleNode_, int depth, double alpha,
       if (beta <= alpha)
         break;
     }
-    // cout << "depth = " << depth << "pos = " <<
-    // currSingleNode_.lastTetris.blockX << " " <<
-    // currSingleNode_.lastTetris.blockY << " " <<
-    // currSingleNode_.lastTetris.orientation << "************ val = " << val <<
-    // endl;
+    /*cout << "depth = " << depth << " pos = " <<
+       currSingleNode_.lastTetris.blockX
+         << " " << currSingleNode_.lastTetris.blockY << " "
+         << currSingleNode_.lastTetris.orientation
+         << " ************ val = " << val << endl;*/
     return val;
   }
 }
@@ -817,38 +815,45 @@ void makeMyDecision(const Node &currNode_, int init_depth1, int init_depth2) {
   position MyBestPosition = MycurrSingleNode.availablePosition.front();
 
   // randomly choose a tetris for opponent
-  int len = HiscurrSingleNode.availableTetris.size();
+  /*int len = HiscurrSingleNode.availableTetris.size();
   srand((unsigned)time(NULL));
-  int r = rand() % len;
+  int r = rand() % len;*/
   int HisWorstTeris;
-  for (list<int>::iterator itr = HiscurrSingleNode.availableTetris.begin();
+  /*for (list<int>::iterator itr = HiscurrSingleNode.availableTetris.begin();
        r >= 0; ++itr) {
     HisWorstTeris = *itr;
     --r;
-  }
+  }*/
   alphabeta_singlemap(MycurrSingleNode, init_depth1, -Inf_double, Inf_double, 1,
                       init_depth1, &MyBestPosition);
-  /*double minmax_ = Inf_double;
-for(list<int>::iterator itr = HiscurrSingleNode.availableTetris.begin(); itr !=
-HiscurrSingleNode.availableTetris.end(); ++itr){
-  SingleNode H1(HiscurrSingleNode, *itr);
-  double max_ = -Inf_double;
-  for(list<position>::iterator itr2 =
-HiscurrSingleNode.availablePosition.begin(); itr2 !=
-HiscurrSingleNode.availablePosition.end(); ++itr2){
+  double enemymax[7];
+  for (int i = 0; i < 7; ++i)
+    enemymax[i] = -Inf_double;
+  double minmax_ = Inf_double;
+
+  for (list<position>::iterator itr =
+           HiscurrSingleNode.availablePosition.begin();
+       itr != HiscurrSingleNode.availablePosition.end(); ++itr) {
+    SingleNode H1(HiscurrSingleNode, *itr);
+    for (list<int>::iterator itr2 = H1.availableTetris.begin();
+         itr2 != H1.availableTetris.end(); ++itr2) {
       SingleNode H2(H1, *itr2);
       position HisBestPosition = H2.availablePosition.front();
       double tmp = alphabeta_singlemap(H2, init_depth2, -Inf_double, Inf_double,
-1, init_depth2, &HisBestPosition);
-      if(tmp > max_)
-          max_ = tmp;
+                                       1, init_depth2, &HisBestPosition);
+      if (tmp > enemymax[*itr2])
+        enemymax[*itr2] = tmp;
+    }
   }
-  if (max_ < minmax_){
-      minmax_ = max_;
+  for (list<int>::iterator itr = HiscurrSingleNode.availableTetris.begin();
+       itr != HiscurrSingleNode.availableTetris.end(); ++itr) {
+    if (enemymax[*itr] < minmax_) {
+      minmax_ = enemymax[*itr];
       HisWorstTeris = *itr;
+    }
   }
-}*/
+
   currDecision.set(MyBestPosition.x, MyBestPosition.y, MyBestPosition.o,
                    HisWorstTeris);
-  //cout << currDecision;
+  cout << currDecision;
 }
