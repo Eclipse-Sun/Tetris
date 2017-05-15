@@ -24,7 +24,7 @@ int main() {
   // 遇事不决先输出（平台上编译不会输出）
   currNode.printField();
 
-  makeMyDecision(currNode, 4, 0);
+  makeMyDecision(currNode, 3, 0);
   // The_direct_best(currNode);
 
   // cin.get();cin.get();
