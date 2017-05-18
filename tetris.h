@@ -12,8 +12,10 @@
 #include <cstring>
 #include <ctime>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <list>
+#include <random>
 #include <string>
 
 using namespace std;
@@ -24,6 +26,8 @@ using namespace std;
 // int what;
 
 const double Inf_double = 10000000;
+
+default_random_engine generator;
 
 // 我所在队伍的颜色（0为红，1为蓝，仅表示队伍，不分先后）
 int currBotColor;
@@ -105,8 +109,107 @@ struct position {
   int o;
 };
 
-class Decision { // TODO: 改为继承position
+const int LEN = 12;
+
+class parameter {
 public:
+  double x[LEN];
+  parameter(double x0, double x1, double x2, double x3, double x4, double x5,
+            double x6, double x7, double x8, double x9, double x10,
+            double x11) {
+    x[0] = x0;
+    x[1] = x1;
+    x[2] = x2;
+    x[3] = x3;
+    x[4] = x4;
+    x[5] = x5;
+    x[6] = x6;
+    x[7] = x7;
+    x[8] = x8;
+    x[9] = x9;
+    x[10] = x10;
+    x[11] = x11;
+  }
+  parameter(double x_[LEN]) {
+    for (int i = 0; i < LEN; ++i)
+      x[i] = x_[i];
+  }
+  parameter(const parameter &p) {
+    for (int i = 0; i < LEN; ++i)
+      x[i] = p.x[i];
+  }
+  inline parameter &operator=(const parameter &p) {
+    for (int i = 0; i < LEN; ++i)
+      x[i] = p.x[i];
+    return *this;
+  }
+  inline parameter &operator+=(const parameter &p) {
+    for (int i = 0; i < LEN; ++i)
+      x[i] += p.x[i];
+    return *this;
+  }
+  inline parameter &set(const parameter &p) {
+    for (int i = 0; i < LEN; ++i)
+      x[i] = p.x[i];
+    return *this;
+  }
+};
+
+parameter defaultParameter(0.025523, 0.012471, 0.93872, 0.32185, 0.11662,
+                           0.0030564, 0.028487, 0.93872, 0.32185, 0.11662,
+                           0.0030564, 0.028487);
+
+inline parameter gaussian(const parameter &p) {
+  double delta[LEN] = {0};
+  for (int i = 0; i < LEN; ++i) {
+    normal_distribution<double> distribution(0, min(p.x[i], 1.));
+    delta[i] = distribution(generator);
+  }
+  parameter d(delta);
+  return d;
+}
+
+inline parameter normalization(const parameter &p) {
+  parameter tmp(p);
+  double norm = 0;
+  for (int i = 0; i < LEN; ++i)
+    norm += p.x[i] * p.x[i];
+  norm = sqrt(norm);
+  for (int i = 0; i < LEN; ++i)
+    tmp.x[i] /= norm;
+  return tmp;
+}
+
+parameter currParameter(defaultParameter);
+
+inline parameter operator+(const parameter &a, const parameter &b) {
+  parameter res(defaultParameter);
+  for (int i = 0; i < LEN; ++i) {
+    res.x[i] = a.x[i] + b.x[i];
+  }
+  return res;
+}
+inline parameter operator-(const parameter &a, const parameter &b) {
+  parameter res(defaultParameter);
+  for (int i = 0; i < LEN; ++i) {
+    res.x[i] = a.x[i] - b.x[i];
+  }
+  return res;
+}
+ostream &operator<<(ostream &out, parameter &p) {
+  out << setprecision(5);
+  for (int i = 0; i < LEN; ++i)
+    out << p.x[i] << ", ";
+  return out;
+}
+inline parameter operator*(const double eta, const parameter &p) {
+  parameter res(p);
+  for (int i = 0; i < LEN; ++i)
+    res.x[i] *= eta;
+  return res;
+}
+
+struct Decision {
   int x, y, o, t;
   Decision(int x_, int y_, int o_, int t_) : x(x_), y(y_), o(o_), t(t_) {}
   inline Decision &set(int x_, int y_, int o_, int t_) {
@@ -148,19 +251,6 @@ public:
   int typeCountForColor_[2][7];                  // 两队的方块数
   int nextTypeForColor_[2];                      // 两队的当前方块
   int dead; // 当前死亡的玩家编号，-1表示没有玩家死亡
-
-  Node(const int grid[][22][12], const int typeCount[][7],
-       const int *nextType) {
-    memcpy(gridInfo_, grid, sizeof(gridInfo_));
-    memcpy(typeCountForColor_, typeCount, sizeof(typeCountForColor_));
-    memcpy(nextTypeForColor_, nextType, sizeof(nextTypeForColor_));
-    memset(transCount_, 0, sizeof(transCount_));
-    memset(maxHeight_, 0, sizeof(maxHeight_));
-    memset(trans_, 0, sizeof(trans_));
-    memset(elimTotal_, 0, sizeof(elimTotal_));
-    memset(lineTotal_, 0, sizeof(lineTotal_));
-    dead = -1;
-  }
 
   Node(const Node &currNode, const Decision &player1, const Decision &player2) {
     memset(transCount_, 0, sizeof(transCount_));
@@ -630,119 +720,65 @@ public:
   }
 
   inline double eval() {
-    int f1LowestHeightOfPosition =
-        lastTetris.blockY +
-        LowestHeight[lastTetris.orientation][lastTetris.blockType];
-    int f2HighestHeightOfPosition =
-        lastTetris.blockY +
-        HighstHeight[lastTetris.orientation][lastTetris.blockType];
-    double f3averageHeightOfPosition =
-        lastTetris.blockY +
-        AverageHeight[lastTetris.orientation][lastTetris.blockType];
+    /*int &f1LowestHeightOfPosition = f[0], &f2HighestHeightOfPosition = f[1],
+        &f4NumberofHoles = f[2], &f5NumberofLinesCompleted = f[3],
+        &f6SurfaceRoughness = f[4], &f9MAXheight = f[5], &f10TotalHeight =
+       f[6];*/
+    int f0 = lastTetris.blockY +
+             LowestHeight[lastTetris.orientation][lastTetris.blockType];
+    int f1 = lastTetris.blockY +
+             HighstHeight[lastTetris.orientation][lastTetris.blockType];
+    int f3 = elimRows;
+    int f2 = 0, f4 = 0, f5 = 0, f6 = 0;
+    // double f3averageHeightOfPosition =
+    //  lastTetris.blockY +
+    // AverageHeight[lastTetris.orientation][lastTetris.blockType];
     int height_[MAPWIDTH + 2];
-    int MAXheight = 0;
     for (int col = 1; col <= MAPWIDTH; ++col) {
       height_[col] = 0;
-      for (int i = MAPHEIGHT; i >= 1; --i) {
+      for (int i = MAPHEIGHT; i >= 1; --i)
         if (gridInfo_[i][col] != 0) {
           height_[col] = i;
           break;
         }
-      }
     }
     for (int col = 1; col <= MAPWIDTH; ++col) {
-      if (height_[col] > MAXheight)
-        MAXheight = height_[col];
+      f6 += height_[col];
+      if (height_[col] > f5)
+        f5 = height_[col];
     }
-    int f4NumberofHoles = 0;
-    for (int col = 1; col <= MAPWIDTH; ++col) {
-      for (int i = height_[col]; i >= 1; --i) {
+    for (int col = 1; col <= MAPWIDTH; ++col)
+      for (int i = height_[col]; i >= 1; --i)
         if (gridInfo_[i][col] == 0)
-          ++f4NumberofHoles;
-      }
-    }
-    int f5NumberofLinesCompleted = elimRows;
-    int f6SurfaceRoughness = 0;
-    for (int col = 2; col <= MAPWIDTH - 2; ++col)
-      f6SurfaceRoughness += abs(height_[col] - height_[col + 1]);
-    f6SurfaceRoughness += 0.2 * (height_[2] - height_[1] +
-                                 height_[MAPWIDTH - 1] - height_[MAPWIDTH]);
-    int f7SquaresAboveHoles = 0;
-    for (int col = 1; col < MAPWIDTH; ++col) {
-      for (int i = height_[col]; i >= 1; --i) {
-        if (gridInfo_[i][col] == 0) {
-          f7SquaresAboveHoles += height_[col] - i + 1;
-          break;
-        }
-      }
-    }
-    int f8SpacesAjacenttoHoles = 0;
-    for (int col = 1; col <= MAPWIDTH; ++col) {
-      for (int i = height_[col]; i >= 1; --i) {
-        if (gridInfo_[i][col] == 0) {
-          if (col > 1 && height_[col - 1] < i)
-            ++f8SpacesAjacenttoHoles;
-          if (col < MAPWIDTH && height_[col + 1] < i)
-            ++f8SpacesAjacenttoHoles;
-        }
-      }
-    }
+          ++f2;
+    for (int col = 1; col <= MAPWIDTH - 1; ++col)
+      f4 += abs(height_[col] - height_[col + 1]);
 
-    double total__ =
-        -40. * f1LowestHeightOfPosition - 20. * f2HighestHeightOfPosition -
-        10. * f3averageHeightOfPosition - 300. * f4NumberofHoles +
-        490. * f5NumberofLinesCompleted - 70. * f6SurfaceRoughness -
-        10. * f7SquaresAboveHoles + 20. * f8SpacesAjacenttoHoles;
-    /*if(total__ == -1025 || total__ == -1095){
-    cout << "block type:" << lastTetris.blockType << ", X: " <<
-lastTetris.blockX << ", Y: " << lastTetris.blockY << ", O: " <<
-lastTetris.orientation << endl;
-cout << "f1: " << f1LowestHeightOfPosition << ", f2: " <<
-f2HighestHeightOfPosition << ", f3: " << f3averageHeightOfPosition << ", f4: "
-<< f4NumberofHoles << ", f5: " << f5NumberofLinesCompleted << ", f6: " <<
-f6SurfaceRoughness << ", f7: " << f7SquaresAboveHoles << ", f8: " <<
-f8SpacesAjacenttoHoles << endl;
-this->printField();}*/
-    // cout << "total = " << total__ << endl;
-    // if(MAXheight > 15)
-    //	total__ -= 800./(21 - MAXheight);
+    f4 += (f5 - height_[1]) + (f5 - height_[MAPWIDTH]);
+
+    double total__ = 0;
+    if (f5 <= 15)
+      total__ -= currParameter.x[0] * f0 + currParameter.x[1] * f1 +
+                 currParameter.x[2] * f2 - currParameter.x[3] * f3 +
+                 currParameter.x[4] * f4 + currParameter.x[5] * f5 +
+                 currParameter.x[6] * f6;
+    else
+      total__ -= currParameter.x[0] * f0 + currParameter.x[1] * f1 +
+                 currParameter.x[7] * f2 - currParameter.x[8] * f3 +
+                 currParameter.x[9] * f4 + currParameter.x[10] * f5 +
+                 currParameter.x[11] * f6;
     return total__;
   }
 };
 
-double The_direct_best(Node &currNode_) {
-  SingleNode currSingleNode_(currNode_, 1);
-  position MyBestPosition = currSingleNode_.availablePosition.front();
-  double val = -Inf_double;
-  for (list<position>::iterator itr = currSingleNode_.availablePosition.begin();
-       itr != currSingleNode_.availablePosition.end(); ++itr) {
-    SingleNode thisChild(currSingleNode_, *itr);
-    double tmp = thisChild.eval();
-    if (tmp > val) {
-      val = tmp;
-      MyBestPosition.x = itr->x;
-      MyBestPosition.y = itr->y;
-      MyBestPosition.o = itr->o;
-      // cout << "val = " << val << endl;
-    }
-  }
-  cout << MyBestPosition.x << " " << MyBestPosition.y << " " << MyBestPosition.o
-       << endl;
-  return val;
-}
-
 double alphabeta_singlemap(SingleNode &currSingleNode_, int depth, double alpha,
                            double beta, bool is_me, int init_depth,
                            position *BestPosition) {
-  // cout << "DEPTH = " << depth << endl;
-  if (depth == 0 || currSingleNode_.dead == 1) {
+  if (depth == 0) {
     double val = currSingleNode_.eval();
-    /*cout << "depth = " << depth << " pos = " <<
-       currSingleNode_.lastTetris.blockX
-         << " " << currSingleNode_.lastTetris.blockY << " "
-         << currSingleNode_.lastTetris.orientation
-         << " ************ val = " << val << endl;*/
     return val;
+  } else if (currSingleNode_.dead == 1) {
+    return -Inf_double;
   }
   if (is_me == 1) {
     double val = -Inf_double;
@@ -750,13 +786,9 @@ double alphabeta_singlemap(SingleNode &currSingleNode_, int depth, double alpha,
              currSingleNode_.availablePosition.begin();
          itr != currSingleNode_.availablePosition.end(); ++itr) {
       SingleNode thisChild(currSingleNode_, *itr);
-      /*cout << "depth: " << depth << " position : " << itr->x << " " << itr->y
-           << " " << itr->o << endl;*/
       double tmp = alphabeta_singlemap(thisChild, depth - 1, alpha, beta, 0,
                                        init_depth, BestPosition);
-      // cout << "tmp = " << tmp << endl;
       if (tmp > val) {
-        // cout << "val = " << tmp << endl;
         val = tmp;
         if (depth == init_depth) {
           BestPosition->x = itr->x;
@@ -766,64 +798,43 @@ double alphabeta_singlemap(SingleNode &currSingleNode_, int depth, double alpha,
       }
       if (tmp > alpha) {
         alpha = tmp;
-        // cout << "alpha = " << tmp << endl;
       }
       if (beta <= alpha)
         break;
     }
-    /*cout << "depth = " << depth
-         << " blocktype = " << currSingleNode_.nextTypeForColor_
-         << " ************ val = " << val << endl;*/
     return val;
   } else {
     double val = Inf_double;
     for (list<int>::iterator itr = currSingleNode_.availableTetris.begin();
          itr != currSingleNode_.availableTetris.end(); ++itr) {
       SingleNode thisChild(currSingleNode_, *itr);
-      // cout << "type = " << *itr << endl;
       double tmp = alphabeta_singlemap(thisChild, depth - 1, alpha, beta, 1,
                                        init_depth, BestPosition);
-      // cout << "tmp = " << tmp << endl;
       if (tmp < val) {
         val = tmp;
-        // cout << "val = " << tmp << endl;
       }
       if (tmp < beta) {
         beta = tmp;
-        // cout << "beta = " << tmp << endl;
       }
       if (beta <= alpha)
         break;
     }
-    /*cout << "depth = " << depth << " pos = " <<
-       currSingleNode_.lastTetris.blockX
-         << " " << currSingleNode_.lastTetris.blockY << " "
-         << currSingleNode_.lastTetris.orientation
-         << " ************ val = " << val << endl;*/
     return val;
   }
 }
 
-void makeMyDecision(const Node &currNode_, int init_depth1, int init_depth2) {
+void makeMyDecision(const Node &currNode_, int init_depth1, int init_depth2,
+                    const parameter &p = defaultParameter) {
+  currParameter.set(p);
   SingleNode MycurrSingleNode(currNode_, 1);
   SingleNode HiscurrSingleNode(currNode_, 0);
   if (MycurrSingleNode.availablePosition.empty()) {
-    cout << "Bot " << currBotColor << ": I guess I am dead!" << endl;
+    // cerr << "Bot " << currBotColor << ": I guess I am dead!" << endl;
     currDecision.set(-1, -1, -1, -1);
     return;
   }
   position MyBestPosition = MycurrSingleNode.availablePosition.front();
-
-  // randomly choose a tetris for opponent
-  /*int len = HiscurrSingleNode.availableTetris.size();
-  srand((unsigned)time(NULL));
-  int r = rand() % len;*/
   int HisWorstTeris;
-  /*for (list<int>::iterator itr = HiscurrSingleNode.availableTetris.begin();
-       r >= 0; ++itr) {
-    HisWorstTeris = *itr;
-    --r;
-  }*/
   alphabeta_singlemap(MycurrSingleNode, init_depth1, -Inf_double, Inf_double, 1,
                       init_depth1, &MyBestPosition);
   double enemymax[7];
@@ -855,5 +866,7 @@ void makeMyDecision(const Node &currNode_, int init_depth1, int init_depth2) {
 
   currDecision.set(MyBestPosition.x, MyBestPosition.y, MyBestPosition.o,
                    HisWorstTeris);
-  cout << currDecision;
+#ifdef _BOTZONE_ONLINE
+  cout << currDecision << endl;
+#endif
 }
